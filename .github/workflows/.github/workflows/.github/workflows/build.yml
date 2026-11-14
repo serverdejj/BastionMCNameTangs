@@ -1,0 +1,26 @@
+
+name: Compilar BastionMCNameTangs
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Compilar plugin
+        run: mvn -B -ntp clean package
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BastionMCNameTangs-JAR
+          path: target/BastionMCNameTangs-1.0.0.jar
