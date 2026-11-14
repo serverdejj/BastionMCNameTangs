@@ -4,8 +4,8 @@ nametag:
   clan: '&7Sin clan'
   rank-fallback: '&7[Jugador]'
   line-one: '%prefix% &f%player%'
-  line-two: '&c❤ %health%/%max_health%'
-  line-three: '%clan% &8| &aDinero: &f$%money%'
+  line-two: '%clan% &8| &aDinero: &f$%money%'
+  line-three: '&c❤ %health%/%max_health%'
   background: false
   hide-vanilla: true
   # Altura adicional desde el punto de montaje sobre la cabeza.

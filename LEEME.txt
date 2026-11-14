@@ -1,14 +1,15 @@
-BASTION MC - BastionMCNameTangs 1.0.5
+BASTION MC NameTangs v1.0.6
 
-FIX: El holograma ahora viaja como pasajero del jugador, sincronizado con su movimiento. NO se teletransporta cada 2 ticks.
+Cambios:
+- Orden: rango y nombre / Sin clan y Dinero / corazon y vida.
+- El holograma sigue montado en el jugador para conservar movimiento sin retraso.
+- Cada holograma incorpora un identificador de propietario; limpia etiquetas previas del mismo jugador al recrearse.
+- Migra el config.yml estandar de v1.0.5 automaticamente a las nuevas lineas.
+- Corrige ruta del artefacto .jar en GitHub Actions.
 
-Se mantienen: 3 lineas (rango/nombre, vida, Sin clan | Dinero), LuckPerms, economia Vault, actionbar SIN dinero y limpieza de hologramas anteriores.
+Instalacion: apagar servidor, retirar .jar anterior, colocar .jar nuevo y reiniciar.
+No usar /reload. Si hay otro plugin de nametags/TAB, puede seguir pintando nombres
+propios y ser necesario desactivar su funcion de nametags.
+Vault requiere proveedor de economia compatible.
 
-INSTALACION:
-1. Compila el repositorio en GitHub Actions.
-2. Apaga completamente Purpur. Quita JARs anteriores y sube el JAR nuevo.
-3. Si tu config.yml fue creado con una version anterior, cambia nametag.height-offset a 0.25; ahora se mide desde el punto donde va montado el holograma.
-4. Enciende el servidor. Evita /reload.
-
-NOTAS: Vault NO es un plugin de economia, necesita un proveedor registrado (p. ej. EssentialsX Economy).
-No se puede garantizar que otros plugins de scoreboard/nametags no interfieran con los equipos de ocultacion de nombres.
+El codigo no esta probado en un servidor real.

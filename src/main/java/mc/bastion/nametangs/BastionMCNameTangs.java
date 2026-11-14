@@ -119,8 +119,8 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
                     if (label != null) {
                         label.text(render(player, String.join("\n",
                             getConfig().getString("nametag.line-one", "%prefix% &f%player%"),
-                            getConfig().getString("nametag.line-two", "&c❤ %health%/%max_health%"),
-                            getConfig().getString("nametag.line-three", "%clan% &8| &aDinero: &f$%money%"))));
+                            getConfig().getString("nametag.line-two", "%clan% &8| &aDinero: &f$%money%"),
+                            getConfig().getString("nametag.line-three", "&c❤ %health%/%max_health%"))));
                         label.setShadowed(getConfig().getBoolean("nametag.shadow", true));
                         label.setDefaultBackground(getConfig().getBoolean("nametag.background", false));
                     }
@@ -135,6 +135,7 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
 
     private void createLabel(Player player) {
         removeLabel(player.getUniqueId());
+        removeDuplicateLabelsFor(player);
         if (!player.isOnline() || !getConfig().getBoolean("nametag.enabled", true)) return;
         // Spawn at the player and mount the display: the CLIENT moves it synchronously
         // with the player, without any server-side teleport / 1-second chase.
@@ -142,6 +143,7 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
         TextDisplay display = player.getWorld().spawn(position, TextDisplay.class, entity -> {
             entity.setPersistent(false);
             entity.addScoreboardTag(LABEL_TAG);
+            entity.addScoreboardTag(ownerTag(player.getUniqueId()));
             entity.setBillboard(Display.Billboard.CENTER);
             entity.setSeeThrough(false);
             entity.setShadowed(true);
@@ -164,6 +166,21 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
             return;
         }
         labels.put(player.getUniqueId(), display);
+    }
+
+
+    // A label is unique per owner, even if an earlier plugin instance left it behind.
+    private String ownerTag(UUID id) {
+        return "bmnt_owner_" + id.toString().replace("-", "");
+    }
+
+    private void removeDuplicateLabelsFor(Player player) {
+        String owner = ownerTag(player.getUniqueId());
+        for (World world : Bukkit.getWorlds()) {
+            for (TextDisplay display : world.getEntitiesByClass(TextDisplay.class)) {
+                if (display.getScoreboardTags().contains(owner)) display.remove();
+            }
+        }
     }
 
     private void removeLabel(UUID id) {
@@ -207,13 +224,21 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
         createdTeams.clear();
     }
 
-    /** Upgrade only the original clan-only line from the older versions. */
+    /** Migrate standard three-line layouts from versions 1.0.3-1.0.5.
+     * Custom layouts are preserved unless they match the old standard layout.
+     */
     private void migrateOldConfig() {
-        String line = getConfig().getString("nametag.line-three", "");
-        if (line.equals("%clan%") || line.equals("&7Sin clan") || line.equals("%clan% &7")) {
-            getConfig().set("nametag.line-three", "%clan% &8| &aDinero: &f$%money%");
-            saveConfig();
+        String second = getConfig().getString("nametag.line-two", "");
+        String third = getConfig().getString("nametag.line-three", "");
+        String heart = "&c❤ %health%/%max_health%";
+        String money = "%clan% &8| &aDinero: &f$%money%";
+        boolean changed = false;
+        if (second.equals(heart) && (third.equals(money) || third.equals("%clan%") || third.equals("&7Sin clan"))) {
+            getConfig().set("nametag.line-two", money);
+            getConfig().set("nametag.line-three", heart);
+            changed = true;
         }
+        if (changed) saveConfig();
     }
 
     /** Clean remnants from older versions, including entities without a marker.
