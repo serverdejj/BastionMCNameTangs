@@ -5,8 +5,10 @@ nametag:
   rank-fallback: '&7[Jugador]'
   line-one: '%prefix% &f%player%'
   line-two: '&c❤ %health%/%max_health%'
-  line-three: '%clan%'
+  line-three: '%clan% &8| &aDinero: &f$%money%'
   background: false
+  hide-vanilla: true
+  height-offset: 0.7
   shadow: true
 # Primera persona: no existe una forma fiable desde el servidor de mostrar
 # un holograma sobre tu propia cabeza en la camara normal de primera persona.
@@ -14,4 +16,7 @@ nametag:
 self-actionbar:
   enabled: true
   text: '%prefix% &f%player% &8| &c❤ %health%/%max_health% &8| %clan%'
-update-ticks: 10
+# Si Vault no tiene una economia conectada, se mostrara este texto:
+economy:
+  unavailable: 'N/D'
+update-ticks: 2

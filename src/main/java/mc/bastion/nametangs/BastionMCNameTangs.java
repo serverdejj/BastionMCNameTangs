@@ -3,10 +3,16 @@ package mc.bastion.nametangs;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.luckperms.api.LuckPerms;
+import net.milkbowl.vault.economy.Economy;
+import org.bukkit.plugin.RegisteredServiceProvider;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
+import java.util.Locale;
 import net.luckperms.api.LuckPermsProvider;
 import net.luckperms.api.model.user.User;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
+import org.bukkit.Location;
 import org.bukkit.entity.Display;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TextDisplay;
@@ -16,38 +22,40 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.scoreboard.Scoreboard;
+import org.bukkit.scoreboard.Team;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 public final class BastionMCNameTangs extends JavaPlugin implements Listener {
     private static final LegacyComponentSerializer LEGACY = LegacyComponentSerializer.legacyAmpersand();
     private final Map<UUID, TextDisplay> labels = new HashMap<>();
+    private final Map<Team, Team.OptionStatus> previousVisibility = new IdentityHashMap<>();
+    private final Set<Team> createdTeams = Collections.newSetFromMap(new IdentityHashMap<>());
     private LuckPerms luckPerms;
+    private Economy economy;
     private BukkitTask updater;
 
     @Override public void onEnable() {
         saveDefaultConfig();
         luckPerms = LuckPermsProvider.get();
+        refreshEconomy();
         Bukkit.getPluginManager().registerEvents(this, this);
-        if (getCommand("nametangs") != null) {
-            getCommand("nametangs").setExecutor((sender, command, alias, args) -> {
-                if (args.length != 1 || !args[0].equalsIgnoreCase("reload")) {
-                    sender.sendMessage("§7Uso: §a/nametangs reload");
-                    return true;
-                }
-                if (!sender.hasPermission("bastionnametangs.admin")) {
-                    sender.sendMessage("§cNo tienes permiso.");
-                    return true;
-                }
-                reloadConfig();
-                restartUpdater();
-                sender.sendMessage("§aBastionMCNameTangs recargado.");
+        if (getCommand("nametangs") != null) getCommand("nametangs").setExecutor((sender, command, alias, args) -> {
+            if (args.length != 1 || !args[0].equalsIgnoreCase("reload")) {
+                sender.sendMessage("§7Uso: §a/nametangs reload");
                 return true;
-            });
-        }
-        // Esperar un tick para garantizar que los jugadores ya esten presentes.
+            }
+            if (!sender.hasPermission("bastionnametangs.admin")) {
+                sender.sendMessage("§cNo tienes permiso.");
+                return true;
+            }
+            reloadConfig();
+            refreshEconomy();
+            restartUpdater();
+            sender.sendMessage("§aBastionMCNameTangs recargado.");
+            return true;
+        });
         Bukkit.getScheduler().runTask(this, () -> {
             for (Player player : Bukkit.getOnlinePlayers()) createLabel(player);
         });
@@ -56,8 +64,8 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
 
     @Override public void onDisable() {
         if (updater != null) updater.cancel();
-        for (TextDisplay label : labels.values()) if (label.isValid()) label.remove();
-        labels.clear();
+        for (UUID id : new ArrayList<>(labels.keySet())) removeLabel(id);
+        restoreTeams();
     }
 
     @EventHandler public void onJoin(PlayerJoinEvent event) {
@@ -66,41 +74,54 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
         }, 2L);
     }
 
-    @EventHandler public void onQuit(PlayerQuitEvent event) {
-        removeLabel(event.getPlayer().getUniqueId());
+    @EventHandler public void onQuit(PlayerQuitEvent event) { removeLabel(event.getPlayer().getUniqueId()); }
+
+    private void refreshEconomy() {
+        economy = null;
+        if (!Bukkit.getPluginManager().isPluginEnabled("Vault")) return;
+        RegisteredServiceProvider<Economy> provider = Bukkit.getServicesManager().getRegistration(Economy.class);
+        if (provider != null) economy = provider.getProvider();
     }
 
     private void restartUpdater() {
         if (updater != null) updater.cancel();
-        long period = Math.max(2, getConfig().getLong("update-ticks", 10));
+        restoreTeams();
+        long period = Math.max(2L, getConfig().getLong("update-ticks", 2L));
         updater = Bukkit.getScheduler().runTaskTimer(this, () -> {
+            if (economy == null && Bukkit.getPluginManager().isPluginEnabled("Vault")) refreshEconomy();
+            boolean enabled = getConfig().getBoolean("nametag.enabled", true);
             for (Player player : Bukkit.getOnlinePlayers()) {
-                if (getConfig().getBoolean("nametag.enabled", true)) {
+                if (enabled) {
                     TextDisplay label = labels.get(player.getUniqueId());
-                    if (label == null || !label.isValid() || !player.getPassengers().contains(label)) {
+                    if (label == null || !label.isValid() || !label.getWorld().equals(player.getWorld())) {
                         createLabel(player);
                         label = labels.get(player.getUniqueId());
                     }
                     if (label != null) {
+                        Location location = player.getLocation().add(0, player.getHeight() + getConfig().getDouble("nametag.height-offset", 0.7), 0);
+                        // A free-standing TextDisplay, not a passenger (passengers overlap vanilla tags).
+                        label.teleport(location);
                         label.text(render(player, String.join("\n",
                             getConfig().getString("nametag.line-one", "%prefix% &f%player%"),
                             getConfig().getString("nametag.line-two", "&c❤ %health%/%max_health%"),
-                            getConfig().getString("nametag.line-three", "%clan%"))));
+                            getConfig().getString("nametag.line-three", "%clan% &8| &aDinero: &f$%money%"))));
                         label.setShadowed(getConfig().getBoolean("nametag.shadow", true));
                         label.setDefaultBackground(getConfig().getBoolean("nametag.background", false));
                     }
                 } else removeLabel(player.getUniqueId());
-                if (getConfig().getBoolean("self-actionbar.enabled", true)) {
+                if (getConfig().getBoolean("self-actionbar.enabled", true))
                     player.sendActionBar(render(player, getConfig().getString("self-actionbar.text", "%prefix% &f%player% &8| &c❤ %health%/%max_health% &8| %clan%")));
-                }
             }
-        }, period, period);
+            if (enabled && getConfig().getBoolean("nametag.hide-vanilla", true)) hideVanillaNametags();
+            else if (!previousVisibility.isEmpty() || !createdTeams.isEmpty()) restoreTeams();
+        }, 2L, period);
     }
 
     private void createLabel(Player player) {
         removeLabel(player.getUniqueId());
         if (!player.isOnline() || !getConfig().getBoolean("nametag.enabled", true)) return;
-        TextDisplay display = player.getWorld().spawn(player.getLocation(), TextDisplay.class, entity -> {
+        Location position = player.getLocation().add(0, player.getHeight() + getConfig().getDouble("nametag.height-offset", 0.7), 0);
+        TextDisplay display = player.getWorld().spawn(position, TextDisplay.class, entity -> {
             entity.setPersistent(false);
             entity.setBillboard(Display.Billboard.CENTER);
             entity.setSeeThrough(false);
@@ -109,18 +130,51 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
             entity.setBackgroundColor(Color.fromARGB(0, 0, 0, 0));
             entity.setLineWidth(250);
             entity.setViewRange(1.0f);
+            entity.setTeleportDuration(2);
             entity.text(Component.empty());
         });
-        if (!player.addPassenger(display)) {
-            display.remove();
-            return;
-        }
         labels.put(player.getUniqueId(), display);
     }
 
     private void removeLabel(UUID id) {
         TextDisplay previous = labels.remove(id);
         if (previous != null && previous.isValid()) previous.remove();
+    }
+
+    private void hideVanillaNametags() {
+        // A scoreboard is client-side per viewer; cover each viewer's active board.
+        // Existing teams are preserved, and their visibility setting restored on disable.
+        for (Player viewer : Bukkit.getOnlinePlayers()) {
+            Scoreboard board = viewer.getScoreboard();
+            for (Player subject : Bukkit.getOnlinePlayers()) {
+                String entry = subject.getName();
+                Team team = board.getEntryTeam(entry);
+                if (team == null) {
+                    String name = "bmnt_" + subject.getUniqueId().toString().substring(0, 8);
+                    team = board.getTeam(name);
+                    if (team == null) {
+                        team = board.registerNewTeam(name);
+                        createdTeams.add(team);
+                    }
+                    team.addEntry(entry);
+                } else if (!createdTeams.contains(team)) {
+                    previousVisibility.putIfAbsent(team, team.getOption(Team.Option.NAME_TAG_VISIBILITY));
+                }
+                team.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.NEVER);
+            }
+        }
+    }
+
+    private void restoreTeams() {
+        for (Map.Entry<Team, Team.OptionStatus> entry : previousVisibility.entrySet()) {
+            try { entry.getKey().setOption(Team.Option.NAME_TAG_VISIBILITY, entry.getValue()); }
+            catch (IllegalStateException ignored) { }
+        }
+        previousVisibility.clear();
+        for (Team team : createdTeams) {
+            try { team.unregister(); } catch (IllegalStateException ignored) { }
+        }
+        createdTeams.clear();
     }
 
     private Component render(Player player, String format) {
@@ -133,12 +187,21 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
         if (prefix.isBlank()) prefix = getConfig().getString("nametag.rank-fallback", "&7[Jugador]");
         double health = Math.max(0.0, player.getHealth());
         double maxHealth = Math.max(1.0, player.getMaxHealth());
+        String balance = getConfig().getString("economy.unavailable", "N/D");
+        if (economy != null) {
+            double amount = economy.getBalance(player);
+            if (Double.isFinite(amount)) {
+                DecimalFormat numberFormat = new DecimalFormat("#,##0.##", DecimalFormatSymbols.getInstance(Locale.US));
+                balance = numberFormat.format(amount);
+            }
+        }
         String processed = format
             .replace("%prefix%", prefix)
             .replace("%player%", player.getName())
             .replace("%health%", Integer.toString((int)Math.ceil(health)))
             .replace("%max_health%", Integer.toString((int)Math.ceil(maxHealth)))
-            .replace("%clan%", getConfig().getString("nametag.clan", "&7Sin clan"));
+            .replace("%clan%", getConfig().getString("nametag.clan", "&7Sin clan"))
+            .replace("%money%", balance);
         return LEGACY.deserialize(processed);
     }
 }

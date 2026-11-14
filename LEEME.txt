@@ -1,16 +1,17 @@
-BASTION MC - BastionMCNameTangs 1.0.0
-Purpur 1.21.11 + LuckPerms
+BastionMCNameTangs v1.0.3 - Dinero en holograma, no en ActionBar
 
-1. Sube el contenido de esta carpeta a un repositorio GitHub.
-2. En GitHub abre Actions > Compilar BastionMCNameTangs > Run workflow.
-3. Descarga el Artifact BastionMCNameTangs-JAR y extrae el .jar.
-4. Pon el .jar en plugins/ junto a LuckPerms y reinicia.
-5. Opcional: edita plugins/BastionMCNameTangs/config.yml y ejecuta /nametangs reload.
+Holograma de 3 lineas:
+1. Rango y nombre
+2. Vida
+3. Sin clan | Dinero: $<saldo>
 
-NOTAS:
-- Holograma de 3 lineas sobre los jugadores mediante TextDisplay pasajeros.
-- En primera persona la informacion propia aparece en la barra de accion.
-- Desde el servidor no se puede saber de forma fiable que vista F5 usa cada jugador.
-- Puede competir por la barra de accion con otros plugins.
-- El nombre original del jugador puede mostrarse tambien: este plugin no lo oculta.
-- No se ha probado en un servidor Purpur real.
+La ActionBar sigue mostrando solo rango, nombre, vida y Sin clan.
+El saldo se obtiene por Vault, pero Vault requiere un plugin que proporcione economia compatible, como EssentialsX Economy.
+Si no hay proveedor de economia, se muestra $N/D.
+
+IMPORTANTE SI ACTUALIZAS DESDE v1.0.2: el config.yml ya creado NO se reemplaza automaticamente. Edita plugins/BastionMCNameTangs/config.yml:
+nametag.line-three: '%clan% &8| &aDinero: &f$%money%'
+self-actionbar.text: '%prefix% &f%player% &8| &c❤ %health%/%max_health% &8| %clan%'
+O renombra el config.yml anterior y reinicia para regenerar el predeterminado.
+
+Para compilar, sube src/, pom.xml y plugin.yml (dentro de src/main/resources) al repositorio; GitHub Actions creara el jar.
