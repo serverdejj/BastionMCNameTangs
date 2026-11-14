@@ -1,19 +1,14 @@
-BASTION MC - BastionMCNameTangs 1.0.4
+BASTION MC - BastionMCNameTangs 1.0.5
 
-CAMBIOS:
-- Limpieza automatica de hologramas duplicados de versiones anteriores.
-- Actualizacion automatica de la linea antigua "Sin clan" para incluir dinero.
-- ActionBar sigue intacta sin dinero.
-- El dinero usa VaultAPI y necesita un proveedor de economia compatible.
+FIX: El holograma ahora viaja como pasajero del jugador, sincronizado con su movimiento. NO se teletransporta cada 2 ticks.
+
+Se mantienen: 3 lineas (rango/nombre, vida, Sin clan | Dinero), LuckPerms, economia Vault, actionbar SIN dinero y limpieza de hologramas anteriores.
 
 INSTALACION:
-1. Compila el proyecto con GitHub Actions.
-2. APAGA el servidor completamente (no uses /reload).
-3. Elimina TODOS los jars antiguos de BastionMCNameTangs de plugins/.
-4. Coloca solo BastionMCNameTangs-1.0.4.jar.
-5. Prende el servidor.
-6. Si no aparece el dinero, revisa plugins/BastionMCNameTangs/config.yml
-   -> nametag.line-three debe tener %money%.
-7. Si sale N/D, Vault no encontro un proveedor de economia.
+1. Compila el repositorio en GitHub Actions.
+2. Apaga completamente Purpur. Quita JARs anteriores y sube el JAR nuevo.
+3. Si tu config.yml fue creado con una version anterior, cambia nametag.height-offset a 0.25; ahora se mide desde el punto donde va montado el holograma.
+4. Enciende el servidor. Evita /reload.
 
-Nota: es posible que otro plugin de TAB/nombres interfiera con las etiquetas.
+NOTAS: Vault NO es un plugin de economia, necesita un proveedor registrado (p. ej. EssentialsX Economy).
+No se puede garantizar que otros plugins de scoreboard/nametags no interfieran con los equipos de ocultacion de nombres.

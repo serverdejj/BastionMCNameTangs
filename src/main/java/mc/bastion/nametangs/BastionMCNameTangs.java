@@ -13,6 +13,8 @@ import net.luckperms.api.LuckPermsProvider;
 import net.luckperms.api.model.user.User;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
+import org.bukkit.util.Transformation;
+import org.joml.Vector3f;
 import org.bukkit.Location;
 import org.bukkit.entity.Display;
 import org.bukkit.entity.Player;
@@ -22,6 +24,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.scoreboard.Scoreboard;
@@ -84,6 +87,13 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
 
     @EventHandler public void onQuit(PlayerQuitEvent event) { removeLabel(event.getPlayer().getUniqueId()); }
 
+    @EventHandler public void onRespawn(PlayerRespawnEvent event) {
+        Player player = event.getPlayer();
+        Bukkit.getScheduler().runTaskLater(this, () -> {
+            if (player.isOnline()) createLabel(player);
+        }, 2L);
+    }
+
     private void refreshEconomy() {
         economy = null;
         if (!Bukkit.getPluginManager().isPluginEnabled("Vault")) return;
@@ -102,14 +112,11 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
             for (Player player : Bukkit.getOnlinePlayers()) {
                 if (enabled) {
                     TextDisplay label = labels.get(player.getUniqueId());
-                    if (label == null || !label.isValid() || !label.getWorld().equals(player.getWorld())) {
+                    if (label == null || !label.isValid() || !label.getWorld().equals(player.getWorld()) || !player.getPassengers().contains(label)) {
                         createLabel(player);
                         label = labels.get(player.getUniqueId());
                     }
                     if (label != null) {
-                        Location location = player.getLocation().add(0, player.getHeight() + getConfig().getDouble("nametag.height-offset", 0.7), 0);
-                        // A free-standing TextDisplay, not a passenger (passengers overlap vanilla tags).
-                        label.teleport(location);
                         label.text(render(player, String.join("\n",
                             getConfig().getString("nametag.line-one", "%prefix% &f%player%"),
                             getConfig().getString("nametag.line-two", "&c❤ %health%/%max_health%"),
@@ -129,7 +136,9 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
     private void createLabel(Player player) {
         removeLabel(player.getUniqueId());
         if (!player.isOnline() || !getConfig().getBoolean("nametag.enabled", true)) return;
-        Location position = player.getLocation().add(0, player.getHeight() + getConfig().getDouble("nametag.height-offset", 0.7), 0);
+        // Spawn at the player and mount the display: the CLIENT moves it synchronously
+        // with the player, without any server-side teleport / 1-second chase.
+        Location position = player.getLocation();
         TextDisplay display = player.getWorld().spawn(position, TextDisplay.class, entity -> {
             entity.setPersistent(false);
             entity.addScoreboardTag(LABEL_TAG);
@@ -140,9 +149,20 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
             entity.setBackgroundColor(Color.fromARGB(0, 0, 0, 0));
             entity.setLineWidth(250);
             entity.setViewRange(1.0f);
-            entity.setTeleportDuration(2);
+            entity.setTeleportDuration(0);
+            entity.setInterpolationDuration(0);
+            // This is relative to the vanilla passenger mounting point (above head),
+            // NOT the player's feet. A modest offset prevents excessive height.
+            Transformation transform = entity.getTransformation();
+            transform.getTranslation().set(0f, (float) getConfig().getDouble("nametag.height-offset", 0.25), 0f);
+            entity.setTransformation(transform);
             entity.text(Component.empty());
         });
+        if (!player.addPassenger(display)) {
+            getLogger().warning("No se pudo montar el holograma de " + player.getName());
+            display.remove();
+            return;
+        }
         labels.put(player.getUniqueId(), display);
     }
 

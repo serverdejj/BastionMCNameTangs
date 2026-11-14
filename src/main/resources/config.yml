@@ -8,7 +8,8 @@ nametag:
   line-three: '%clan% &8| &aDinero: &f$%money%'
   background: false
   hide-vanilla: true
-  height-offset: 0.7
+  # Altura adicional desde el punto de montaje sobre la cabeza.
+  height-offset: 0.25
   shadow: true
 # Primera persona: no existe una forma fiable desde el servidor de mostrar
 # un holograma sobre tu propia cabeza en la camara normal de primera persona.
