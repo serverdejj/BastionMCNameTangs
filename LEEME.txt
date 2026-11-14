@@ -1,17 +1,19 @@
-BastionMCNameTangs v1.0.3 - Dinero en holograma, no en ActionBar
+BASTION MC - BastionMCNameTangs 1.0.4
 
-Holograma de 3 lineas:
-1. Rango y nombre
-2. Vida
-3. Sin clan | Dinero: $<saldo>
+CAMBIOS:
+- Limpieza automatica de hologramas duplicados de versiones anteriores.
+- Actualizacion automatica de la linea antigua "Sin clan" para incluir dinero.
+- ActionBar sigue intacta sin dinero.
+- El dinero usa VaultAPI y necesita un proveedor de economia compatible.
 
-La ActionBar sigue mostrando solo rango, nombre, vida y Sin clan.
-El saldo se obtiene por Vault, pero Vault requiere un plugin que proporcione economia compatible, como EssentialsX Economy.
-Si no hay proveedor de economia, se muestra $N/D.
+INSTALACION:
+1. Compila el proyecto con GitHub Actions.
+2. APAGA el servidor completamente (no uses /reload).
+3. Elimina TODOS los jars antiguos de BastionMCNameTangs de plugins/.
+4. Coloca solo BastionMCNameTangs-1.0.4.jar.
+5. Prende el servidor.
+6. Si no aparece el dinero, revisa plugins/BastionMCNameTangs/config.yml
+   -> nametag.line-three debe tener %money%.
+7. Si sale N/D, Vault no encontro un proveedor de economia.
 
-IMPORTANTE SI ACTUALIZAS DESDE v1.0.2: el config.yml ya creado NO se reemplaza automaticamente. Edita plugins/BastionMCNameTangs/config.yml:
-nametag.line-three: '%clan% &8| &aDinero: &f$%money%'
-self-actionbar.text: '%prefix% &f%player% &8| &c❤ %health%/%max_health% &8| %clan%'
-O renombra el config.yml anterior y reinicia para regenerar el predeterminado.
-
-Para compilar, sube src/, pom.xml y plugin.yml (dentro de src/main/resources) al repositorio; GitHub Actions creara el jar.
+Nota: es posible que otro plugin de TAB/nombres interfiera con las etiquetas.

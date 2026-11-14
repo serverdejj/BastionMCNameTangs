@@ -2,6 +2,7 @@ package mc.bastion.nametangs;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import net.luckperms.api.LuckPerms;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.plugin.RegisteredServiceProvider;
@@ -16,6 +17,7 @@ import org.bukkit.Location;
 import org.bukkit.entity.Display;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TextDisplay;
+import org.bukkit.World;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -32,12 +34,16 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
     private final Map<UUID, TextDisplay> labels = new HashMap<>();
     private final Map<Team, Team.OptionStatus> previousVisibility = new IdentityHashMap<>();
     private final Set<Team> createdTeams = Collections.newSetFromMap(new IdentityHashMap<>());
+    private static final String LABEL_TAG = "bastionmc_nametangs_label";
     private LuckPerms luckPerms;
     private Economy economy;
     private BukkitTask updater;
+    private long cycles = 0;
 
     @Override public void onEnable() {
         saveDefaultConfig();
+        migrateOldConfig();
+        removeOrphanLabels();
         luckPerms = LuckPermsProvider.get();
         refreshEconomy();
         Bukkit.getPluginManager().registerEvents(this, this);
@@ -51,6 +57,8 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
                 return true;
             }
             reloadConfig();
+            migrateOldConfig();
+            removeOrphanLabels();
             refreshEconomy();
             restartUpdater();
             sender.sendMessage("§aBastionMCNameTangs recargado.");
@@ -88,6 +96,7 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
         restoreTeams();
         long period = Math.max(2L, getConfig().getLong("update-ticks", 2L));
         updater = Bukkit.getScheduler().runTaskTimer(this, () -> {
+            if (++cycles % Math.max(1L, 100L / period) == 0) removeOrphanLabels();
             if (economy == null && Bukkit.getPluginManager().isPluginEnabled("Vault")) refreshEconomy();
             boolean enabled = getConfig().getBoolean("nametag.enabled", true);
             for (Player player : Bukkit.getOnlinePlayers()) {
@@ -123,6 +132,7 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
         Location position = player.getLocation().add(0, player.getHeight() + getConfig().getDouble("nametag.height-offset", 0.7), 0);
         TextDisplay display = player.getWorld().spawn(position, TextDisplay.class, entity -> {
             entity.setPersistent(false);
+            entity.addScoreboardTag(LABEL_TAG);
             entity.setBillboard(Display.Billboard.CENTER);
             entity.setSeeThrough(false);
             entity.setShadowed(true);
@@ -175,6 +185,39 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
             try { team.unregister(); } catch (IllegalStateException ignored) { }
         }
         createdTeams.clear();
+    }
+
+    /** Upgrade only the original clan-only line from the older versions. */
+    private void migrateOldConfig() {
+        String line = getConfig().getString("nametag.line-three", "");
+        if (line.equals("%clan%") || line.equals("&7Sin clan") || line.equals("%clan% &7")) {
+            getConfig().set("nametag.line-three", "%clan% &8| &aDinero: &f$%money%");
+            saveConfig();
+        }
+    }
+
+    /** Clean remnants from older versions, including entities without a marker.
+     * This is intentionally limited to text displays using our unique three-line layout.
+     */
+    private void removeOrphanLabels() {
+        Set<UUID> active = new HashSet<>();
+        for (TextDisplay display : labels.values()) if (display.isValid()) active.add(display.getUniqueId());
+        int removed = 0;
+        for (World world : Bukkit.getWorlds()) {
+            for (TextDisplay display : world.getEntitiesByClass(TextDisplay.class)) {
+                if (active.contains(display.getUniqueId())) continue;
+                boolean ours = display.getScoreboardTags().contains(LABEL_TAG);
+                if (!ours) {
+                    Component component = display.text();
+                    String plain = component == null ? "" : PlainTextComponentSerializer.plainText().serialize(component);
+                    // Old versions always used exactly 3 lines with a heart and "Sin clan".
+                    ours = plain.contains("\n") && plain.contains("❤") && plain.contains("Sin clan")
+                           && (plain.contains("20/") || plain.matches("(?s).*\\d+/\\d+.*"));
+                }
+                if (ours) { display.remove(); removed++; }
+            }
+        }
+        if (removed > 0) getLogger().info("Se eliminaron " + removed + " hologramas antiguos duplicados.");
     }
 
     private Component render(Player player, String format) {
