@@ -1,0 +1,16 @@
+BASTION MC - BastionMCNameTangs 1.0.0
+Purpur 1.21.11 + LuckPerms
+
+1. Sube el contenido de esta carpeta a un repositorio GitHub.
+2. En GitHub abre Actions > Compilar BastionMCNameTangs > Run workflow.
+3. Descarga el Artifact BastionMCNameTangs-JAR y extrae el .jar.
+4. Pon el .jar en plugins/ junto a LuckPerms y reinicia.
+5. Opcional: edita plugins/BastionMCNameTangs/config.yml y ejecuta /nametangs reload.
+
+NOTAS:
+- Holograma de 3 lineas sobre los jugadores mediante TextDisplay pasajeros.
+- En primera persona la informacion propia aparece en la barra de accion.
+- Desde el servidor no se puede saber de forma fiable que vista F5 usa cada jugador.
+- Puede competir por la barra de accion con otros plugins.
+- El nombre original del jugador puede mostrarse tambien: este plugin no lo oculta.
+- No se ha probado en un servidor Purpur real.

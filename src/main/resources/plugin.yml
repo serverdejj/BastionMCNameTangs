@@ -1,0 +1,15 @@
+name: BastionMCNameTangs
+version: 1.0.0
+main: mc.bastion.nametangs.BastionMCNameTangs
+api-version: '1.21.11'
+author: BASTION MC
+depend: [LuckPerms]
+description: Etiquetas de rango, vida y clan, con vista propia en la barra de accion.
+commands:
+  nametangs:
+    description: Recarga la configuracion de etiquetas.
+    usage: /nametangs reload
+    permission: bastionnametangs.admin
+permissions:
+  bastionnametangs.admin:
+    default: op
