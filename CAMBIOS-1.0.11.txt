@@ -1,0 +1,4 @@
+Altura predeterminada 0.35; dungeon vida igual a Spawn.
+IMPORTANTE: editar manualmente plugins/BastionMCNameTangs/config.yml existente:
+nametag.passenger-height-offset: 0.35
+dungeon.line-two: '&c❤ %health%/%max_health%'

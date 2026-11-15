@@ -11,7 +11,7 @@ nametag:
   # Altura adicional desde el punto de montaje sobre la cabeza.
   height-offset: 0.25
   # Ajuste vertical cuando el holograma va montado como pasajero.
-  passenger-height-offset: 0.85
+  passenger-height-offset: 0.35
   shadow: true
 # Primera persona: no existe una forma fiable desde el servidor de mostrar
 # un holograma sobre tu propia cabeza en la camara normal de primera persona.
@@ -27,5 +27,5 @@ update-ticks: 1
 # Etiqueta especial al entrar a una mazmorra iniciada con /dungeon go.
 dungeon:
   line-one: '%prefix% &f%player%'
-  line-two: '&c❤ VIDA %health%/%max_health%'
+  line-two: '&c❤ %health%/%max_health%'
   line-three: '&6⚔ ESTÁS EN DUNGEON'

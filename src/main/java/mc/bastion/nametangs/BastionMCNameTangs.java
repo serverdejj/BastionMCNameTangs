@@ -208,7 +208,7 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
                             boolean dungeon = dungeonMode.contains(player.getUniqueId());
                             label.text(render(player, dungeon ? String.join("\n",
                                 getConfig().getString("dungeon.line-one", "%prefix% &f%player%"),
-                                getConfig().getString("dungeon.line-two", "&c❤ VIDA %health%/%max_health%"),
+                                getConfig().getString("dungeon.line-two", "&c❤ %health%/%max_health%"),
                                 getConfig().getString("dungeon.line-three", "&6⚔ ESTÁS EN DUNGEON")) : String.join("\n",
                                 getConfig().getString("nametag.line-one", "%prefix% &f%player%"),
                                 getConfig().getString("nametag.line-two", "%clan% &8| &aDinero: &f$%money%"),
@@ -248,7 +248,7 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
             // Como pasajero, la posición inicial se reemplaza al montar.
             // La traslación del display SÍ permite elevar el texto sobre la cabeza.
             Transformation transform = entity.getTransformation();
-            transform.getTranslation().set(0f, (float) getConfig().getDouble("nametag.passenger-height-offset", 0.85), 0f);
+            transform.getTranslation().set(0f, (float) getConfig().getDouble("nametag.passenger-height-offset", 0.35), 0f);
             entity.setTransformation(transform);
             entity.text(Component.empty());
         });
