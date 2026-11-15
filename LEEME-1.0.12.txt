@@ -1,0 +1,5 @@
+BASTION MC NameTangs 1.0.12
+Cambio: passenger-height-offset predeterminado 0.35 -> -0.45 para bajar el texto.
+No se modifica la logica de teletransporte ni la integracion de Dungeons.
+IMPORTANTE: En plugins/BastionMCNameTangs/config.yml existente, cambiar o agregar dentro de nametag: passenger-height-offset: -0.45.
+Si queda muy bajo, probar -0.30; si queda muy alto, probar -0.60. Reiniciar servidor tras editar.

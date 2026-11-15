@@ -248,7 +248,7 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
             // Como pasajero, la posición inicial se reemplaza al montar.
             // La traslación del display SÍ permite elevar el texto sobre la cabeza.
             Transformation transform = entity.getTransformation();
-            transform.getTranslation().set(0f, (float) getConfig().getDouble("nametag.passenger-height-offset", 0.35), 0f);
+            transform.getTranslation().set(0f, (float) getConfig().getDouble("nametag.passenger-height-offset", -0.45), 0f);
             entity.setTransformation(transform);
             entity.text(Component.empty());
         });
