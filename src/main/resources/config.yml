@@ -1,4 +1,4 @@
-# Colores con &; los prefijos de LuckPerms tambien admiten &.
+# Colores &, HEX (&#RRGGBB) y MiniMessage (<b>, <gradient>, <rainbow>).
 nametag:
   enabled: true
   clan: '&7Sin clan'
@@ -27,6 +27,7 @@ update-ticks: 1
 
 # Etiqueta especial al entrar a una mazmorra iniciada con /dungeon go.
 dungeon:
+  enabled: true
   line-one: '%prefix% &f%player%'
   line-two: '&c❤ %health%/%max_health%'
-  line-three: '&6⚔ ESTÁS EN DUNGEON'
+  line-three: '<b><gradient:#63E787:#FFFFFF:#6FE763>⚔ ESTAS EN DUNGEON</gradient></b>'

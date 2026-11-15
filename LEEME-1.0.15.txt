@@ -1,0 +1,7 @@
+BASTION MC NAMETANGS 1.0.15
+- Nametag normal y dungeon configurables en config.yml.
+- Compatibilidad con MiniMessage: <b>, <gradient:#63E787:#FFFFFF:#6FE763>texto</gradient></b>, <rainbow>.
+- Soporta codigos & y &#RRGGBB.
+- Mantiene altura de pasajero -0.90 y la integracion con Dungeons.
+- Si config.yml ya existe, agrega dungeon.enabled y edita dungeon.line-one, line-two, line-three manualmente.
+- Compilar con Maven (Java 21) usando GitHub Actions.

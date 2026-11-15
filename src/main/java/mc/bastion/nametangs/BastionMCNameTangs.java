@@ -1,7 +1,7 @@
 package mc.bastion.nametangs;
 
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import net.luckperms.api.LuckPerms;
 import net.milkbowl.vault.economy.Economy;
@@ -40,7 +40,7 @@ import org.bukkit.scoreboard.Team;
 import java.util.*;
 
 public final class BastionMCNameTangs extends JavaPlugin implements Listener {
-    private static final LegacyComponentSerializer LEGACY = LegacyComponentSerializer.legacyAmpersand();
+    private static final MiniMessage MINI = MiniMessage.miniMessage();
     private final Map<UUID, TextDisplay> labels = new HashMap<>();
     private final Map<Team, Team.OptionStatus> previousVisibility = new IdentityHashMap<>();
     private final Set<Team> createdTeams = Collections.newSetFromMap(new IdentityHashMap<>());
@@ -234,7 +234,7 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
                             label = labels.get(player.getUniqueId());
                         }
                         if (label != null) {
-                            boolean dungeon = dungeonMode.contains(player.getUniqueId());
+                            boolean dungeon = getConfig().getBoolean("dungeon.enabled", true) && dungeonMode.contains(player.getUniqueId());
                             label.text(render(player, dungeon ? String.join("\n",
                                 getConfig().getString("dungeon.line-one", "%prefix% &f%player%"),
                                 getConfig().getString("dungeon.line-two", "&c❤ %health%/%max_health%"),
@@ -421,6 +421,52 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
             .replace("%max_health%", Integer.toString((int)Math.ceil(maxHealth)))
             .replace("%clan%", getConfig().getString("nametag.clan", "&7Sin clan"))
             .replace("%money%", balance);
-        return LEGACY.deserialize(processed);
+        return MINI.deserialize(legacyToMiniMessage(processed));
     }
+    // Convierte codigos tradicionales (&a, &l, &#RRGGBB) sin eliminar etiquetas
+    // MiniMessage como <b>, <gradient:...> y <rainbow>.
+    private static String legacyToMiniMessage(String input) {
+        StringBuilder out = new StringBuilder();
+        String colors = "0123456789abcdef";
+        String[] names = {"black", "dark_blue", "dark_green", "dark_aqua",
+            "dark_red", "dark_purple", "gold", "gray", "dark_gray", "blue",
+            "green", "aqua", "red", "light_purple", "yellow", "white"};
+        for (int i = 0; i < input.length(); i++) {
+            char c = input.charAt(i);
+            if (c == '&' && i + 1 < input.length()) {
+                char next = Character.toLowerCase(input.charAt(i + 1));
+                if (next == '#' && i + 7 < input.length()) {
+                    String hex = input.substring(i + 2, i + 8);
+                    if (hex.matches("(?i)[0-9a-f]{6}")) {
+                        out.append("<color:#").append(hex).append('>');
+                        i += 7;
+                        continue;
+                    }
+                }
+                int index = colors.indexOf(next);
+                if (index >= 0) {
+                    out.append("<color:").append(names[index]).append('>');
+                    i++;
+                    continue;
+                }
+                String tag = switch (next) {
+                    case 'l' -> "<bold>";
+                    case 'o' -> "<italic>";
+                    case 'n' -> "<underlined>";
+                    case 'm' -> "<strikethrough>";
+                    case 'k' -> "<obfuscated>";
+                    case 'r' -> "<reset>";
+                    default -> null;
+                };
+                if (tag != null) {
+                    out.append(tag);
+                    i++;
+                    continue;
+                }
+            }
+            out.append(c);
+        }
+        return out.toString();
+    }
+
 }
