@@ -48,6 +48,7 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
     private long cycles = 0;
     private final Set<UUID> dungeonIntent = new HashSet<>();
     private final Set<UUID> dungeonMode = new HashSet<>();
+    private final Set<UUID> awaitingDungeonExit = new HashSet<>();
     private final Map<UUID, Long> detachedUntil = new HashMap<>();
 
     @Override public void onEnable() {
@@ -86,6 +87,7 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
         detachedUntil.clear();
         dungeonIntent.clear();
         dungeonMode.clear();
+        awaitingDungeonExit.clear();
         restoreTeams();
     }
 
@@ -101,6 +103,7 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
         detachedUntil.remove(id);
         dungeonIntent.remove(id);
         dungeonMode.remove(id);
+        awaitingDungeonExit.remove(id);
     }
 
     // Desmontar ANTES de ejecutar /dungeon go; el evento de teleport puede llegar
@@ -127,6 +130,15 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
         detachForTravel(event.getPlayer(), dungeonIntent.contains(event.getPlayer().getUniqueId()) ? 20L * 30L : 20L * 3L);
     }
 
+    /** Called by BastionDungeons BEFORE its return teleport. No dependency is needed. */
+    public void prepareDungeonReturn(Player player) {
+        if (player == null) return;
+        UUID id = player.getUniqueId();
+        awaitingDungeonExit.add(id);
+        removeLabel(id);
+        detachedUntil.put(id, (long) Bukkit.getCurrentTick() + 20L * 30L);
+    }
+
     @EventHandler public void onWorldChange(PlayerChangedWorldEvent event) {
         Player player = event.getPlayer();
         UUID id = player.getUniqueId();
@@ -137,6 +149,7 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
             dungeonMode.remove(id);
             dungeonIntent.remove(id);
         }
+        awaitingDungeonExit.remove(id);
         detachedUntil.remove(id);
         Bukkit.getScheduler().runTaskLater(this, () -> {
             if (player.isOnline()) createLabel(player);
@@ -172,6 +185,7 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
             if (economy == null && Bukkit.getPluginManager().isPluginEnabled("Vault")) refreshEconomy();
             boolean enabled = getConfig().getBoolean("nametag.enabled", true);
             for (Player player : Bukkit.getOnlinePlayers()) {
+                if (awaitingDungeonExit.contains(player.getUniqueId())) continue;
                 Long until = detachedUntil.get(player.getUniqueId());
                 if (until != null && Bukkit.getCurrentTick() < until) continue;
                 if (until != null) {
@@ -231,9 +245,10 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
             entity.setViewRange(1.0f);
             entity.setTeleportDuration(1);
             entity.setInterpolationDuration(0);
-            // La posición ya incluye la altura; no aplicar un segundo desplazamiento.
+            // Como pasajero, la posición inicial se reemplaza al montar.
+            // La traslación del display SÍ permite elevar el texto sobre la cabeza.
             Transformation transform = entity.getTransformation();
-            transform.getTranslation().set(0f, 0f, 0f);
+            transform.getTranslation().set(0f, (float) getConfig().getDouble("nametag.passenger-height-offset", 0.85), 0f);
             entity.setTransformation(transform);
             entity.text(Component.empty());
         });

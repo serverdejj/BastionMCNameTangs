@@ -1,5 +1,5 @@
 name: BastionMCNameTangs
-version: 1.0.9
+version: 1.0.10
 main: mc.bastion.nametangs.BastionMCNameTangs
 api-version: '1.21.11'
 author: BASTION MC

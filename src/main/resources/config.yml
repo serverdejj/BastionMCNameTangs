@@ -10,6 +10,8 @@ nametag:
   hide-vanilla: true
   # Altura adicional desde el punto de montaje sobre la cabeza.
   height-offset: 0.25
+  # Ajuste vertical cuando el holograma va montado como pasajero.
+  passenger-height-offset: 0.85
   shadow: true
 # Primera persona: no existe una forma fiable desde el servidor de mostrar
 # un holograma sobre tu propia cabeza en la camara normal de primera persona.

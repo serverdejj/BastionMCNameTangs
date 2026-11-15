@@ -1,0 +1,10 @@
+BASTION MC NAMETANGS 1.0.10 - salida segura de dungeons
+
+- El plugin de mazmorras llama prepareDungeonReturn() ANTES de devolver al jugador.
+- NameTangs desmonta el TextDisplay y no lo vuelve a montar hasta cambiar de mundo.
+- El nametag se eleva con nametag.passenger-height-offset (predeterminado 0.85).
+- Requiere instalar TAMBIEN el JAR actualizado de BASTION DUNGEONS.
+- No borrar la carpeta de configuración.
+- Si falla el regreso, el mundo no se borra mientras queden jugadores.
+
+Estas fuentes no han sido compiladas ni probadas en Purpur.
