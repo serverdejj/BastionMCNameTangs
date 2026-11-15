@@ -1,0 +1,7 @@
+BastionMCNameTangs 1.0.14
+- Hologramas solo en Survival y Creativo.
+- Se desmontan inmediatamente al morir o pasar a Aventura/Espectador.
+- Cada participante obtiene el estilo Dungeon al entrar en mundos bd_, aunque no haya ejecutado /dungeon go.
+- Conserva prepareDungeonReturn() para compatibilidad con BastionDungeons.
+- Altura predeterminada -0.90. Si tienes config.yml existente, conserva tu valor actual.
+- Reemplaza solamente el JAR de NameTangs; conserva el JAR de Dungeons que funciona.

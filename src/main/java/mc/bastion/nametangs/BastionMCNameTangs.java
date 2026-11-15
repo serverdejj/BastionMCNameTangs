@@ -20,6 +20,9 @@ import org.bukkit.entity.Display;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TextDisplay;
 import org.bukkit.World;
+import org.bukkit.GameMode;
+import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.player.PlayerGameModeChangeEvent;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -97,6 +100,28 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
         }, 2L);
     }
 
+    private boolean showLabel(Player player) {
+        if (!player.isOnline() || player.isDead()) return false;
+        GameMode mode = player.getGameMode();
+        return mode == GameMode.SURVIVAL || mode == GameMode.CREATIVE;
+    }
+
+    @EventHandler public void onGameModeChange(PlayerGameModeChangeEvent event) {
+        if (event.isCancelled()) return;
+        GameMode next = event.getNewGameMode();
+        if (next == GameMode.ADVENTURE || next == GameMode.SPECTATOR) {
+            removeLabel(event.getPlayer().getUniqueId());
+        } else {
+            Bukkit.getScheduler().runTaskLater(this, () -> {
+                if (showLabel(event.getPlayer())) createLabel(event.getPlayer());
+            }, 2L);
+        }
+    }
+
+    @EventHandler public void onDeath(PlayerDeathEvent event) {
+        removeLabel(event.getEntity().getUniqueId());
+    }
+
     @EventHandler public void onQuit(PlayerQuitEvent event) {
         UUID id = event.getPlayer().getUniqueId();
         removeLabel(id);
@@ -142,13 +167,10 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
     @EventHandler public void onWorldChange(PlayerChangedWorldEvent event) {
         Player player = event.getPlayer();
         UUID id = player.getUniqueId();
-        if (dungeonIntent.contains(id) && player.getWorld().getName().startsWith("bd_")) {
-            dungeonMode.add(id);
-            dungeonIntent.remove(id);
-        } else if (dungeonMode.contains(id) && !player.getWorld().getName().startsWith("bd_")) {
-            dungeonMode.remove(id);
-            dungeonIntent.remove(id);
-        }
+        // Detectar el mundo de la dungeon para CADA participante, no solo quien uso /dungeon go.
+        if (player.getWorld().getName().startsWith("bd_")) dungeonMode.add(id);
+        else dungeonMode.remove(id);
+        dungeonIntent.remove(id);
         awaitingDungeonExit.remove(id);
         detachedUntil.remove(id);
         Bukkit.getScheduler().runTaskLater(this, () -> {
@@ -185,6 +207,13 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
             if (economy == null && Bukkit.getPluginManager().isPluginEnabled("Vault")) refreshEconomy();
             boolean enabled = getConfig().getBoolean("nametag.enabled", true);
             for (Player player : Bukkit.getOnlinePlayers()) {
+                if (!showLabel(player)) {
+                    removeLabel(player.getUniqueId());
+                    continue;
+                }
+                // Detectar tambien jugadores que ya estaban en el mundo al activar el plugin.
+                if (player.getWorld().getName().startsWith("bd_")) dungeonMode.add(player.getUniqueId());
+                else dungeonMode.remove(player.getUniqueId());
                 if (awaitingDungeonExit.contains(player.getUniqueId())) continue;
                 Long until = detachedUntil.get(player.getUniqueId());
                 if (until != null && Bukkit.getCurrentTick() < until) continue;
@@ -216,7 +245,7 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
                         }
                         // Aplicar la altura real del TextDisplay montado, tambien tras cambios de config.
                         Transformation current = label.getTransformation();
-                        float desiredY = (float) getConfig().getDouble("nametag.passenger-height-offset", -1.35);
+                        float desiredY = (float) getConfig().getDouble("nametag.passenger-height-offset", -0.90);
                         if (Math.abs(current.getTranslation().y - desiredY) > 0.001f) {
                             current.getTranslation().y = desiredY;
                             label.setTransformation(current);
@@ -236,7 +265,7 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
     private void createLabel(Player player) {
         removeLabel(player.getUniqueId());
         removeDuplicateLabelsFor(player);
-        if (!player.isOnline() || !getConfig().getBoolean("nametag.enabled", true)) return;
+        if (!showLabel(player) || !getConfig().getBoolean("nametag.enabled", true)) return;
         // Montaje directo: el holograma se desmonta antes de los viajes.
         Location position = player.getLocation().clone().add(0, player.getHeight() + getConfig().getDouble("nametag.height-offset", 0.25), 0);
         TextDisplay display = player.getWorld().spawn(position, TextDisplay.class, entity -> {
@@ -255,7 +284,7 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
             // Como pasajero, la posición inicial se reemplaza al montar.
             // La traslación del display SÍ permite elevar el texto sobre la cabeza.
             Transformation transform = entity.getTransformation();
-            transform.getTranslation().set(0f, (float) getConfig().getDouble("nametag.passenger-height-offset", -1.35), 0f);
+            transform.getTranslation().set(0f, (float) getConfig().getDouble("nametag.passenger-height-offset", -0.90), 0f);
             entity.setTransformation(transform);
             entity.text(Component.empty());
         });

@@ -11,8 +11,9 @@ nametag:
   # Posicion inicial antes de montar; no controla la altura del pasajero.
   height-offset: 0.25
   # Ajuste vertical cuando el holograma va montado como pasajero.
-  passenger-height-offset: -1.35
+  passenger-height-offset: -0.90
   shadow: true
+  # Solo Survival y Creativo muestran holograma; Aventura y Espectador lo ocultan.
 # Primera persona: no existe una forma fiable desde el servidor de mostrar
 # un holograma sobre tu propia cabeza en la camara normal de primera persona.
 # Como alternativa, muestra tu informacion en la barra de accion.
