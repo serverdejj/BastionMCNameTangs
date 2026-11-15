@@ -1,0 +1,6 @@
+BastionMCNameTangs 1.0.8
+- Seguimiento del TextDisplay cada tick (50 ms).
+- Duracion de teletransporte visual: 1 tick.
+- Sigue sin utilizar addPassenger, para evitar el conflicto con /dungeon go.
+- Si ya existe config.yml, cambia update-ticks: 2 a update-ticks: 1 manualmente.
+- No garantiza seguimiento perfecto debido a la interpolacion/latencia del cliente.

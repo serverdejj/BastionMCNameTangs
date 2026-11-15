@@ -20,4 +20,4 @@ self-actionbar:
 # Si Vault no tiene una economia conectada, se mostrara este texto:
 economy:
   unavailable: 'N/D'
-update-ticks: 2
+update-ticks: 1

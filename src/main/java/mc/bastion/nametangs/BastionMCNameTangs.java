@@ -104,7 +104,7 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
     private void restartUpdater() {
         if (updater != null) updater.cancel();
         restoreTeams();
-        long period = Math.max(2L, getConfig().getLong("update-ticks", 2L));
+        long period = Math.max(1L, getConfig().getLong("update-ticks", 1L));
         updater = Bukkit.getScheduler().runTaskTimer(this, () -> {
             if (++cycles % Math.max(1L, 100L / period) == 0) removeOrphanLabels();
             if (economy == null && Bukkit.getPluginManager().isPluginEnabled("Vault")) refreshEconomy();
@@ -133,7 +133,7 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
             }
             if (enabled && getConfig().getBoolean("nametag.hide-vanilla", true)) hideVanillaNametags();
             else if (!previousVisibility.isEmpty() || !createdTeams.isEmpty()) restoreTeams();
-        }, 2L, period);
+        }, 1L, period);
     }
 
     private void createLabel(Player player) {
@@ -154,7 +154,7 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
             entity.setBackgroundColor(Color.fromARGB(0, 0, 0, 0));
             entity.setLineWidth(250);
             entity.setViewRange(1.0f);
-            entity.setTeleportDuration(Math.max(1, (int) getConfig().getLong("update-ticks", 2L)));
+            entity.setTeleportDuration(1);
             entity.setInterpolationDuration(0);
             // La posición ya incluye la altura; no aplicar un segundo desplazamiento.
             Transformation transform = entity.getTransformation();
