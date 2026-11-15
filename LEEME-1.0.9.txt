@@ -1,0 +1,10 @@
+BastionMCNameTangs 1.0.9 - EXPERIMENTAL
+
+- Monta el TextDisplay como pasajero para evitar retraso visual.
+- Desmonta antes de /dungeon go y comandos habituales de teletransporte.
+- Desmonta en PlayerTeleportEvent para teletransportes de otros plugins (puede ser demasiado tarde para ciertos plugins).
+- Reaparece al cambiar de mundo; muestra etiqueta de Dungeon si /dungeon go llevo a un mundo bd_*.
+- Al regresar a un mundo normal restaura clan, dinero y vida.
+- Los nombres de los mundos de mazmorra deben comenzar por bd_.
+- No hay integracion directa con eventos internos de BastionDungeons, asi que el desmontaje 5-10 segundos ANTES de salir no esta garantizado; se desmonta al detectar el teletransporte.
+- NO COMPILADO NI PROBADO EN PURPUR.

@@ -21,3 +21,9 @@ self-actionbar:
 economy:
   unavailable: 'N/D'
 update-ticks: 1
+
+# Etiqueta especial al entrar a una mazmorra iniciada con /dungeon go.
+dungeon:
+  line-one: '%prefix% &f%player%'
+  line-two: '&c❤ VIDA %health%/%max_health%'
+  line-three: '&6⚔ ESTÁS EN DUNGEON'

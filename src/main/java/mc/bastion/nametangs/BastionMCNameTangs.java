@@ -25,6 +25,10 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
+import org.bukkit.event.player.PlayerCommandPreprocessEvent;
+import org.bukkit.event.player.PlayerTeleportEvent;
+import org.bukkit.event.player.PlayerChangedWorldEvent;
+import org.bukkit.event.EventPriority;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.scoreboard.Scoreboard;
@@ -42,6 +46,9 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
     private Economy economy;
     private BukkitTask updater;
     private long cycles = 0;
+    private final Set<UUID> dungeonIntent = new HashSet<>();
+    private final Set<UUID> dungeonMode = new HashSet<>();
+    private final Map<UUID, Long> detachedUntil = new HashMap<>();
 
     @Override public void onEnable() {
         saveDefaultConfig();
@@ -76,6 +83,9 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
     @Override public void onDisable() {
         if (updater != null) updater.cancel();
         for (UUID id : new ArrayList<>(labels.keySet())) removeLabel(id);
+        detachedUntil.clear();
+        dungeonIntent.clear();
+        dungeonMode.clear();
         restoreTeams();
     }
 
@@ -85,7 +95,59 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
         }, 2L);
     }
 
-    @EventHandler public void onQuit(PlayerQuitEvent event) { removeLabel(event.getPlayer().getUniqueId()); }
+    @EventHandler public void onQuit(PlayerQuitEvent event) {
+        UUID id = event.getPlayer().getUniqueId();
+        removeLabel(id);
+        detachedUntil.remove(id);
+        dungeonIntent.remove(id);
+        dungeonMode.remove(id);
+    }
+
+    // Desmontar ANTES de ejecutar /dungeon go; el evento de teleport puede llegar
+    // demasiado tarde si Paper rechaza viajar con pasajeros.
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void onCommand(PlayerCommandPreprocessEvent event) {
+        String raw = event.getMessage().trim().toLowerCase(Locale.ROOT);
+        String[] parts = raw.split("\\s+");
+        if (parts.length == 0) return;
+        String cmd = parts[0];
+        boolean dungeon = (cmd.equals("/dungeon") || cmd.endsWith(":dungeon"))
+                && parts.length > 1 && parts[1].equals("go");
+        boolean teleport = dungeon || Arrays.asList("/tp", "/teleport", "/tpa", "/tpaccept", "/spawn", "/home", "/back", "/warp", "/world", "/mvtp", "/rtp", "/wild").contains(cmd)
+                || cmd.endsWith(":tp") || cmd.endsWith(":teleport") || cmd.endsWith(":world");
+        if (!teleport) return;
+        UUID id = event.getPlayer().getUniqueId();
+        if (dungeon) dungeonIntent.add(id);
+        detachForTravel(event.getPlayer(), dungeon ? 20L * 30L : 20L * 3L);
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void onTeleport(PlayerTeleportEvent event) {
+        if (event.getTo() == null) return;
+        detachForTravel(event.getPlayer(), dungeonIntent.contains(event.getPlayer().getUniqueId()) ? 20L * 30L : 20L * 3L);
+    }
+
+    @EventHandler public void onWorldChange(PlayerChangedWorldEvent event) {
+        Player player = event.getPlayer();
+        UUID id = player.getUniqueId();
+        if (dungeonIntent.contains(id) && player.getWorld().getName().startsWith("bd_")) {
+            dungeonMode.add(id);
+            dungeonIntent.remove(id);
+        } else if (dungeonMode.contains(id) && !player.getWorld().getName().startsWith("bd_")) {
+            dungeonMode.remove(id);
+            dungeonIntent.remove(id);
+        }
+        detachedUntil.remove(id);
+        Bukkit.getScheduler().runTaskLater(this, () -> {
+            if (player.isOnline()) createLabel(player);
+        }, 2L);
+    }
+
+    private void detachForTravel(Player player, long ticks) {
+        UUID id = player.getUniqueId();
+        removeLabel(id);
+        detachedUntil.put(id, Math.max(detachedUntil.getOrDefault(id, 0L), Bukkit.getCurrentTick() + ticks));
+    }
 
     @EventHandler public void onRespawn(PlayerRespawnEvent event) {
         Player player = event.getPlayer();
@@ -110,6 +172,12 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
             if (economy == null && Bukkit.getPluginManager().isPluginEnabled("Vault")) refreshEconomy();
             boolean enabled = getConfig().getBoolean("nametag.enabled", true);
             for (Player player : Bukkit.getOnlinePlayers()) {
+                Long until = detachedUntil.get(player.getUniqueId());
+                if (until != null && Bukkit.getCurrentTick() < until) continue;
+                if (until != null) {
+                    detachedUntil.remove(player.getUniqueId());
+                    dungeonIntent.remove(player.getUniqueId());
+                }
                 if (enabled) {
                     TextDisplay label = labels.get(player.getUniqueId());
                     if (label == null || !label.isValid() || !label.getWorld().equals(player.getWorld())) {
@@ -117,13 +185,21 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
                         label = labels.get(player.getUniqueId());
                     }
                     if (label != null) {
-                        // Nunca montar el holograma como pasajero: bloquea teleportAsync entre mundos.
-                        Location target = player.getLocation().clone().add(0, player.getHeight() + getConfig().getDouble("nametag.height-offset", 0.25), 0);
-                        label.teleport(target);
-                        label.text(render(player, String.join("\n",
-                            getConfig().getString("nametag.line-one", "%prefix% &f%player%"),
-                            getConfig().getString("nametag.line-two", "%clan% &8| &aDinero: &f$%money%"),
-                            getConfig().getString("nametag.line-three", "&c❤ %health%/%max_health%"))));
+                        if (!player.getPassengers().contains(label)) {
+                            removeLabel(player.getUniqueId());
+                            createLabel(player);
+                            label = labels.get(player.getUniqueId());
+                        }
+                        if (label != null) {
+                            boolean dungeon = dungeonMode.contains(player.getUniqueId());
+                            label.text(render(player, dungeon ? String.join("\n",
+                                getConfig().getString("dungeon.line-one", "%prefix% &f%player%"),
+                                getConfig().getString("dungeon.line-two", "&c❤ VIDA %health%/%max_health%"),
+                                getConfig().getString("dungeon.line-three", "&6⚔ ESTÁS EN DUNGEON")) : String.join("\n",
+                                getConfig().getString("nametag.line-one", "%prefix% &f%player%"),
+                                getConfig().getString("nametag.line-two", "%clan% &8| &aDinero: &f$%money%"),
+                                getConfig().getString("nametag.line-three", "&c❤ %health%/%max_health%"))));
+                        }
                         label.setShadowed(getConfig().getBoolean("nametag.shadow", true));
                         label.setDefaultBackground(getConfig().getBoolean("nametag.background", false));
                     }
@@ -140,8 +216,7 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
         removeLabel(player.getUniqueId());
         removeDuplicateLabelsFor(player);
         if (!player.isOnline() || !getConfig().getBoolean("nametag.enabled", true)) return;
-        // Holograma independiente: nunca agregar pasajeros al jugador.
-        // Los pasajeros pueden hacer que Paper rechace teleportAsync entre mundos.
+        // Montaje directo: el holograma se desmonta antes de los viajes.
         Location position = player.getLocation().clone().add(0, player.getHeight() + getConfig().getDouble("nametag.height-offset", 0.25), 0);
         TextDisplay display = player.getWorld().spawn(position, TextDisplay.class, entity -> {
             entity.setPersistent(false);
@@ -162,6 +237,11 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
             entity.setTransformation(transform);
             entity.text(Component.empty());
         });
+        if (!player.addPassenger(display)) {
+            display.remove();
+            getLogger().warning("No se pudo montar el nametag de " + player.getName());
+            return;
+        }
         labels.put(player.getUniqueId(), display);
     }
 
@@ -182,7 +262,10 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
 
     private void removeLabel(UUID id) {
         TextDisplay previous = labels.remove(id);
-        if (previous != null && previous.isValid()) previous.remove();
+        if (previous != null && previous.isValid()) {
+            if (previous.getVehicle() != null) previous.getVehicle().removePassenger(previous);
+            previous.remove();
+        }
     }
 
     private void hideVanillaNametags() {
