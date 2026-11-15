@@ -112,11 +112,14 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
             for (Player player : Bukkit.getOnlinePlayers()) {
                 if (enabled) {
                     TextDisplay label = labels.get(player.getUniqueId());
-                    if (label == null || !label.isValid() || !label.getWorld().equals(player.getWorld()) || !player.getPassengers().contains(label)) {
+                    if (label == null || !label.isValid() || !label.getWorld().equals(player.getWorld())) {
                         createLabel(player);
                         label = labels.get(player.getUniqueId());
                     }
                     if (label != null) {
+                        // Nunca montar el holograma como pasajero: bloquea teleportAsync entre mundos.
+                        Location target = player.getLocation().clone().add(0, player.getHeight() + getConfig().getDouble("nametag.height-offset", 0.25), 0);
+                        label.teleport(target);
                         label.text(render(player, String.join("\n",
                             getConfig().getString("nametag.line-one", "%prefix% &f%player%"),
                             getConfig().getString("nametag.line-two", "%clan% &8| &aDinero: &f$%money%"),
@@ -137,9 +140,9 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
         removeLabel(player.getUniqueId());
         removeDuplicateLabelsFor(player);
         if (!player.isOnline() || !getConfig().getBoolean("nametag.enabled", true)) return;
-        // Spawn at the player and mount the display: the CLIENT moves it synchronously
-        // with the player, without any server-side teleport / 1-second chase.
-        Location position = player.getLocation();
+        // Holograma independiente: nunca agregar pasajeros al jugador.
+        // Los pasajeros pueden hacer que Paper rechace teleportAsync entre mundos.
+        Location position = player.getLocation().clone().add(0, player.getHeight() + getConfig().getDouble("nametag.height-offset", 0.25), 0);
         TextDisplay display = player.getWorld().spawn(position, TextDisplay.class, entity -> {
             entity.setPersistent(false);
             entity.addScoreboardTag(LABEL_TAG);
@@ -151,20 +154,14 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
             entity.setBackgroundColor(Color.fromARGB(0, 0, 0, 0));
             entity.setLineWidth(250);
             entity.setViewRange(1.0f);
-            entity.setTeleportDuration(0);
+            entity.setTeleportDuration(Math.max(1, (int) getConfig().getLong("update-ticks", 2L)));
             entity.setInterpolationDuration(0);
-            // This is relative to the vanilla passenger mounting point (above head),
-            // NOT the player's feet. A modest offset prevents excessive height.
+            // La posición ya incluye la altura; no aplicar un segundo desplazamiento.
             Transformation transform = entity.getTransformation();
-            transform.getTranslation().set(0f, (float) getConfig().getDouble("nametag.height-offset", 0.25), 0f);
+            transform.getTranslation().set(0f, 0f, 0f);
             entity.setTransformation(transform);
             entity.text(Component.empty());
         });
-        if (!player.addPassenger(display)) {
-            getLogger().warning("No se pudo montar el holograma de " + player.getName());
-            display.remove();
-            return;
-        }
         labels.put(player.getUniqueId(), display);
     }
 

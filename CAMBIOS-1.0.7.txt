@@ -1,0 +1,7 @@
+BastionMCNameTangs 1.0.7 - compatibilidad de teletransporte
+
+El TextDisplay ya NO se monta como pasajero del jugador. Se actualiza su posicion cada update-ticks. Esto evita que Paper rechace teletransportes entre mundos por pasajeros. Se mantienen nombre, dinero, corazones y formato.
+
+Subir contenido del ZIP al repositorio y compilar con Actions. Hacer copia del JAR anterior.
+
+No probado en un servidor Purpur real.
