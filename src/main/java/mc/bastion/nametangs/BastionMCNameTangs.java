@@ -214,6 +214,13 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
                                 getConfig().getString("nametag.line-two", "%clan% &8| &aDinero: &f$%money%"),
                                 getConfig().getString("nametag.line-three", "&c❤ %health%/%max_health%"))));
                         }
+                        // Aplicar la altura real del TextDisplay montado, tambien tras cambios de config.
+                        Transformation current = label.getTransformation();
+                        float desiredY = (float) getConfig().getDouble("nametag.passenger-height-offset", -1.35);
+                        if (Math.abs(current.getTranslation().y - desiredY) > 0.001f) {
+                            current.getTranslation().y = desiredY;
+                            label.setTransformation(current);
+                        }
                         label.setShadowed(getConfig().getBoolean("nametag.shadow", true));
                         label.setDefaultBackground(getConfig().getBoolean("nametag.background", false));
                     }
@@ -248,7 +255,7 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
             // Como pasajero, la posición inicial se reemplaza al montar.
             // La traslación del display SÍ permite elevar el texto sobre la cabeza.
             Transformation transform = entity.getTransformation();
-            transform.getTranslation().set(0f, (float) getConfig().getDouble("nametag.passenger-height-offset", -0.45), 0f);
+            transform.getTranslation().set(0f, (float) getConfig().getDouble("nametag.passenger-height-offset", -1.35), 0f);
             entity.setTransformation(transform);
             entity.text(Component.empty());
         });

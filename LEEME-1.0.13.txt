@@ -1,0 +1,6 @@
+BASTION MC NAMETANGS 1.0.13
+- Ajuste vertical del TextDisplay montado: -1.35 por defecto.
+- Se reaplica la traslacion en cada actualizacion para mantener la altura configurada.
+- No cambia la logica de teleport ni la integracion de Dungeons.
+IMPORTANTE: en plugins/BastionMCNameTangs/config.yml ya existente, establecer nametag.passenger-height-offset: -1.35. Reiniciar.
+Si queda demasiado bajo, probar -1.10; si alto, -1.60.
