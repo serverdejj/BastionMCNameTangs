@@ -55,6 +55,7 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
     private final Set<UUID> dungeonMode = new HashSet<>();
     private final Set<UUID> awaitingDungeonExit = new HashSet<>();
     private final Map<UUID, Long> detachedUntil = new HashMap<>();
+    private final Map<UUID, Integer> travelGeneration = new HashMap<>();
 
     @Override public void onEnable() {
         saveDefaultConfig();
@@ -90,6 +91,7 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
         if (updater != null) updater.cancel();
         for (UUID id : new ArrayList<>(labels.keySet())) removeLabel(id);
         detachedUntil.clear();
+        travelGeneration.clear();
         dungeonIntent.clear();
         dungeonMode.clear();
         awaitingDungeonExit.clear();
@@ -128,6 +130,7 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
         UUID id = event.getPlayer().getUniqueId();
         removeLabel(id);
         detachedUntil.remove(id);
+        travelGeneration.remove(id);
         dungeonIntent.remove(id);
         dungeonMode.remove(id);
         awaitingDungeonExit.remove(id);
@@ -143,7 +146,7 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
         String cmd = parts[0];
         boolean dungeon = (cmd.equals("/dungeon") || cmd.endsWith(":dungeon"))
                 && parts.length > 1 && parts[1].equals("go");
-        boolean teleport = dungeon || Arrays.asList("/tp", "/teleport", "/tpa", "/tpaccept", "/spawn", "/home", "/back", "/warp", "/world", "/mvtp", "/rtp", "/wild").contains(cmd)
+        boolean teleport = dungeon || Arrays.asList("/tp", "/teleport", "/tpa", "/tpaccept", "/home", "/back", "/warp", "/world", "/mvtp", "/rtp", "/wild").contains(cmd)
                 || cmd.endsWith(":tp") || cmd.endsWith(":teleport") || cmd.endsWith(":world");
         if (!teleport) return;
         UUID id = event.getPlayer().getUniqueId();
@@ -174,6 +177,24 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
         detachForTravel(event.getPlayer(), dungeonIntent.contains(event.getPlayer().getUniqueId()) ? 20L * 30L : 20L * 3L);
     }
 
+    // Restaurar el nametag tras un teletransporte, incluso dentro del mismo mundo.
+    // MONITOR se ejecuta despues de las comprobaciones de otros plugins.
+    // La generacion impide que una tarea antigua interrumpa un viaje posterior.
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onTeleportCompleted(PlayerTeleportEvent event) {
+        if (event.getTo() == null) return;
+        Player player = event.getPlayer();
+        UUID id = player.getUniqueId();
+        int generation = travelGeneration.getOrDefault(id, 0);
+        Bukkit.getScheduler().runTaskLater(this, () -> {
+            if (!player.isOnline() || player.isDead()) return;
+            if (travelGeneration.getOrDefault(id, 0) != generation) return;
+            if (awaitingDungeonExit.contains(id) || dungeonIntent.contains(id)) return;
+            detachedUntil.remove(id);
+            if (showLabel(player) && getConfig().getBoolean("nametag.enabled", true)) createLabel(player);
+        }, 20L);
+    }
+
     /** Called by BastionDungeons BEFORE its return teleport. No dependency is needed. */
     public void prepareDungeonReturn(Player player) {
         if (player == null) return;
@@ -192,6 +213,7 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
         dungeonIntent.remove(id);
         awaitingDungeonExit.remove(id);
         detachedUntil.remove(id);
+        travelGeneration.merge(id, 1, Integer::sum);
         Bukkit.getScheduler().runTaskLater(this, () -> {
             if (player.isOnline()) createLabel(player);
         }, 2L);
@@ -206,6 +228,7 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
     private void detachForTravel(Player player, long ticks) {
         UUID id = player.getUniqueId();
         removeLabel(id);
+        travelGeneration.merge(id, 1, Integer::sum);
         detachedUntil.put(id, Math.max(detachedUntil.getOrDefault(id, 0L), Bukkit.getCurrentTick() + ticks));
     }
 
