@@ -1,0 +1,10 @@
+BastionMCNameTangs 1.0.16 — compatibilidad con BastionMCRTP
+
+Antes de seleccionar una dimension en el menu BASTION | RTP, desmonta el TextDisplay del jugador. Esto permite que teleportAsync no sea rechazado por llevar pasajeros.
+El holograma reaparece automaticamente despues del viaje (o tras 30 segundos si falla).
+No modifica las configuraciones existentes ni el comportamiento de Dungeons.
+
+Instalacion: compila con GitHub Actions, guarda copia del JAR anterior, sustituye solo el JAR y reinicia.
+
+IMPORTANTE: La deteccion usa el titulo por defecto del menu de BastionMCRTP. Si personalizas ese titulo, actualiza el detector en el codigo.
+Proyecto no compilado ni probado en un servidor real en este entorno.

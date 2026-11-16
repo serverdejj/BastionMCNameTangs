@@ -30,6 +30,8 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.Material;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.EventPriority;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -147,6 +149,23 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
         UUID id = event.getPlayer().getUniqueId();
         if (dungeon) dungeonIntent.add(id);
         detachForTravel(event.getPlayer(), dungeon ? 20L * 30L : 20L * 3L);
+    }
+
+    // RTP por GUI: el PlayerTeleportEvent puede llegar demasiado tarde cuando
+    // el jugador tiene un TextDisplay como pasajero. Desmontar ANTES del click.
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onRtpMenuClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)) return;
+        if (event.getClickedInventory() == null || event.getClickedInventory() != event.getView().getTopInventory()) return;
+        if (!Bukkit.getPluginManager().isPluginEnabled("BastionMCRTP")) return;
+        String title = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
+        if (!title.replaceAll("\\s+", "").equalsIgnoreCase("BASTION|RTP")) return;
+        if (event.getCurrentItem() == null) return;
+        Material type = event.getCurrentItem().getType();
+        if (type != Material.GRASS_BLOCK && type != Material.NETHERRACK && type != Material.END_STONE) return;
+        // La busqueda puede tardar varios segundos. Evita volver a montar
+        // el holograma mientras el RTP busca y ejecuta teleportAsync.
+        detachForTravel(player, 20L * 30L);
     }
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
