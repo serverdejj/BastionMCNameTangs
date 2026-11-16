@@ -197,6 +197,12 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
         }, 2L);
     }
 
+    /** Public integration hook for BastionMCRTP. Must be called on the server thread. */
+    public void prepareRtpTravel(Player player) {
+        if (player == null || !player.isOnline()) return;
+        detachForTravel(player, 20L * 60L);
+    }
+
     private void detachForTravel(Player player, long ticks) {
         UUID id = player.getUniqueId();
         removeLabel(id);
