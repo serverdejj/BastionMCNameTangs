@@ -6,6 +6,7 @@ import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import net.luckperms.api.LuckPerms;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.plugin.RegisteredServiceProvider;
+import org.bukkit.plugin.Plugin;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.Locale;
@@ -467,10 +468,35 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
             .replace("%player%", player.getName())
             .replace("%health%", Integer.toString((int)Math.ceil(health)))
             .replace("%max_health%", Integer.toString((int)Math.ceil(maxHealth)))
+            .replace("%bastionclans_player%", bastionClanPlaceholder(player))
             .replace("%clan%", getConfig().getString("nametag.clan", "&7Sin clan"))
             .replace("%money%", balance);
         return MINI.deserialize(legacyToMiniMessage(processed));
     }
+    /** Lee el clan directamente de BastionMCClans, sin crear hologramas adicionales.
+     * Si el jugador no tiene clan, usa el símbolo configurable de NameTangs.
+     * El plugin de clanes expone getClanName(UUID) y getClanPlaceholder(UUID).
+     */
+    private String bastionClanPlaceholder(Player player) {
+        String fallback = getConfig().getString("nametag.clan", "&c✘");
+        Plugin clans = Bukkit.getPluginManager().getPlugin("BastionMCClans");
+        if (clans == null || !clans.isEnabled()) return fallback;
+        try {
+            Object name = clans.getClass().getMethod("getClanName", UUID.class)
+                .invoke(clans, player.getUniqueId());
+            if (!(name instanceof String clanName) || clanName.isEmpty()) return fallback;
+            Object result = clans.getClass().getMethod("getClanPlaceholder", UUID.class)
+                .invoke(clans, player.getUniqueId());
+            if (result instanceof String colored && !colored.isEmpty()) {
+                // BastionMCClans devuelve códigos §; el renderizador procesa códigos &.
+                return colored.replace('§', '&');
+            }
+        } catch (ReflectiveOperationException ex) {
+            // Compatible con versiones anteriores de Clans: no rompe el nametag.
+        }
+        return fallback;
+    }
+
     // Convierte codigos tradicionales (&a, &l, &#RRGGBB) sin eliminar etiquetas
     // MiniMessage como <b>, <gradient:...> y <rainbow>.
     private static String legacyToMiniMessage(String input) {
