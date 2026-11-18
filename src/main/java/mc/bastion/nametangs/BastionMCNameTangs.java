@@ -48,6 +48,7 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
     private final Map<Team, Team.OptionStatus> previousVisibility = new IdentityHashMap<>();
     private final Set<Team> createdTeams = Collections.newSetFromMap(new IdentityHashMap<>());
     private static final String LABEL_TAG = "bastionmc_nametangs_label";
+    private static final String SPAWN_JOIN_TRAVEL_FLAG = "bastionmcspawn_join_travel";
     private LuckPerms luckPerms;
     private Economy economy;
     private BukkitTask updater;
@@ -106,6 +107,7 @@ public final class BastionMCNameTangs extends JavaPlugin implements Listener {
     }
 
     private boolean showLabel(Player player) {
+        if (player.hasMetadata(SPAWN_JOIN_TRAVEL_FLAG)) return false;
         if (!player.isOnline() || player.isDead()) return false;
         GameMode mode = player.getGameMode();
         return mode == GameMode.SURVIVAL || mode == GameMode.CREATIVE;

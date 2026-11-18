@@ -1,0 +1,4 @@
+Compatibilidad con BastionMCSpawn:
+El plugin no monta el TextDisplay del nametag mientras BastionMCSpawn realiza el teletransporte del primer ingreso.
+Al terminar el traslado el nametag vuelve a crearse automaticamente por el actualizador.
+El resto de funciones de NameTangs, incluidas dungeons/RTP, no se modifica.
